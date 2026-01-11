@@ -1,14 +1,37 @@
 {
   "manifest_version": 3,
-  "name": "Basic Chrome Extension",
+  "name": "Sendlio Email Hunter",
   "version": "1.0",
-  "description": "This is a simple basic structure of Chrome Extension",
+  "description": "Automatically detects and saves emails from web pages",
+
+  "icons": {
+    "16": "icon16.png"
+  },
+
   "action": {
-    "default_popup": "popup.html",
-    "default_icon": {
-      "16": "icon16.png",
-      "48": "icon48.png",
-      "128": "icon128.png"
+    "default_title": "Sendlio Email Hunter",
+    "default_popup": "popup.html"
+  },
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
     }
-  }
+  ],
+
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab"
+  ],
+
+  "host_permissions": [
+    "<all_urls>"
+  ]
 }
