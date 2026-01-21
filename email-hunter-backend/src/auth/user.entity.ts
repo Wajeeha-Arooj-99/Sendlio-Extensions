@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 import { Email } from '../email/email.entity';
 
-@Entity('users')
+@Entity('user')
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
@@ -18,8 +18,8 @@ export class User {
   @Column()
   password: string;
 
-  @OneToMany(() => Email, (email) => email.user)
-  emails: Email[];
+  // @OneToMany(() => Email, (email) => email.user)
+  // emails: Email[];
 
   @CreateDateColumn()
   createdAt: Date;
