@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+
 import { AuthModule } from './auth/auth.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -19,11 +21,12 @@ import { AuthModule } from './auth/auth.module';
         password: config.get('DB_PASS'),
         database: config.get('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: true, 
+        synchronize: true,
       }),
     }),
 
     AuthModule,
+    EmailModule,
   ],
 })
 export class AppModule {}

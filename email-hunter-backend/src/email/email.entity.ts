@@ -1,4 +1,3 @@
-import { User } from 'src/auth/user.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -6,6 +5,7 @@ import {
   ManyToOne,
   CreateDateColumn,
 } from 'typeorm';
+import { User } from '../auth/user.entity';
 
 @Entity('emails')
 export class Email {
@@ -13,15 +13,12 @@ export class Email {
   id: number;
 
   @Column()
-  email: string;
+  address: string;
 
-  @Column({ nullable: true })
-  sourceUrl: string;
-
-  // @ManyToOne(() => User, (user) => user.emails, {
-  //   onDelete: 'CASCADE',
-  // })
-  // user: User;
+  @ManyToOne(() => User, (user) => user.emails, {
+    onDelete: 'CASCADE',
+  })
+  user: User;
 
   @CreateDateColumn()
   createdAt: Date;
