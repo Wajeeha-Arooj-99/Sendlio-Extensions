@@ -3,27 +3,93 @@ import { createRoot } from 'react-dom/client';
 import './popup.css';
 
 function Popup() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [token, setToken] = useState(null);
+  const [mode, setMode] = useState('login');
+
   const [savedEmails, setSavedEmails] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+
   useEffect(() => {
-    loadSavedEmails();
+    checkLoginStatus();
   }, []);
 
-  const loadSavedEmails = () => {
-    chrome.storage.local.get(['savedEmails'], (result) => {
-      const emails = result.savedEmails || [];
-      setSavedEmails(emails);
-      setLoading(false);
+  const checkLoginStatus = () => {
+    chrome.storage.local.get(['authToken'], (result) => {
+      if (result.authToken) {
+        setIsLoggedIn(true);
+        setToken(result.authToken);
+        loadSavedEmails();
+      } else {
+        setIsLoggedIn(false);
+        setLoading(false);
+      }
     });
   };
 
-  const clearAllEmails = () => {
-    if (confirm('Are you sure you want to clear all saved emails?')) {
-      chrome.storage.local.set({ savedEmails: [] }, () => {
-        setSavedEmails([]);
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setIsAuthLoading(true);
+    setAuthError('');
+
+    const url =
+      mode === 'login'
+        ? 'http://localhost:3000/auth/login'
+        : 'http://localhost:3000/auth/signup';
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setAuthError(data.message || 'Authentication failed');
+        return;
+      }
+
+      if (mode === 'signup') {
+        setMode('login');
+        setAuthError('Account created successfully. Please log in.');
+        return;
+      }
+
+      chrome.storage.local.set({ authToken: data.access_token }, () => {
+        setIsLoggedIn(true);
+        setToken(data.access_token);
+        loadSavedEmails();
+      });
+    } catch (error) {
+      setAuthError('Server not reachable');
+      console.error(error);
+    } finally {
+      setIsAuthLoading(false);
     }
+  };
+
+
+  const handleLogout = () => {
+    chrome.storage.local.remove(['authToken'], () => {
+      setIsLoggedIn(false);
+      setToken(null);
+      setSavedEmails([]);
+    });
+  };
+
+
+  const loadSavedEmails = () => {
+    chrome.storage.local.get(['savedEmails'], (result) => {
+      setSavedEmails(result.savedEmails || []);
+      setLoading(false);
+    });
   };
 
   const deleteEmail = (index) => {
@@ -35,78 +101,114 @@ function Popup() {
 
   const copyEmail = (email) => {
     navigator.clipboard.writeText(email);
-    alert(`Copied: ${email}`);
   };
 
-  if (loading) {
+
+
+  if (!isLoggedIn) {
     return (
-      <div className="popup-container">
-        <div className="header">
-          <h1>📧 Sendlio Email Hunter</h1>
-        </div>
-        <div className="loading">Loading...</div>
+      <div className="auth-wrapper">
+        <form className="auth-card" onSubmit={handleAuth}>
+          <h2 className="auth-title">
+            {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+          </h2>
+
+          <div className="input-group">
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="input-group">
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          {authError && (
+            <p
+              className={`auth-msg ${
+                authError.includes('successfully') ? 'success' : 'error'
+              }`}
+            >
+              {authError}
+            </p>
+          )}
+
+          <button className="auth-btn" disabled={isAuthLoading}>
+            {isAuthLoading
+              ? 'Please wait...'
+              : mode === 'login'
+              ? 'Log In'
+              : 'Sign Up'}
+          </button>
+
+          <p className="auth-switch">
+            {mode === 'login' ? (
+              <>
+                Don’t have an account?
+                <span onClick={() => setMode('signup')}> Sign up</span>
+              </>
+            ) : (
+              <>
+                Already have an account?
+                <span onClick={() => setMode('login')}> Log in</span>
+              </>
+            )}
+          </p>
+        </form>
       </div>
     );
+  }
+
+  if (loading) {
+    return <div className="loading">Loading…</div>;
   }
 
   return (
     <div className="popup-container">
       <div className="header">
         <h1>📧 Sendlio Email Hunter</h1>
-        {savedEmails.length > 0 && (
-          <button className="clear-btn" onClick={clearAllEmails}>
-            Clear All
-          </button>
-        )}
+        <button className="logout-btn" onClick={handleLogout}>
+          Logout
+        </button>
       </div>
 
-      <div className="stats">
-        <p>Total Pages Scanned: {savedEmails.length}</p>
-        <p>Total Emails Found: {savedEmails.reduce((sum, item) => sum + item.emails.length, 0)}</p>
-      </div>
+      {savedEmails.length === 0 ? (
+        <p className="hint">Visit any page — emails will auto-detect ✨</p>
+      ) : (
+        savedEmails.map((item, index) => (
+          <div key={index} className="email-item">
+            <h3>{item.title || 'Untitled Page'}</h3>
+            <small>{item.url}</small>
 
-      <div className="emails-list">
-        {savedEmails.length === 0 ? (
-          <div className="empty-state">
-            <p>No emails found yet.</p>
-            <p className="hint">Visit any webpage and emails will be automatically detected!</p>
+            <ul>
+              {item.emails.map((email, i) => (
+                <li key={i}>
+                  {email}
+                  <button onClick={() => copyEmail(email)}>Copy</button>
+                </li>
+              ))}
+            </ul>
+
+            <button className="delete-btn" onClick={() => deleteEmail(index)}>
+              Remove
+            </button>
           </div>
-        ) : (
-          savedEmails.map((item, index) => (
-            <div key={index} className="email-item">
-              <div className="email-header">
-                <h3 className="page-title">{item.title || 'Untitled Page'}</h3>
-                <button className="delete-btn" onClick={() => deleteEmail(index)}>
-                  ✕
-                </button>
-              </div>
-              <a href={item.url} target="_blank" rel="noopener noreferrer" className="page-url">
-                {item.url}
-              </a>
-              <div className="emails-found">
-                <strong>Emails ({item.emails.length}):</strong>
-                <ul>
-                  {item.emails.map((email, emailIndex) => (
-                    <li key={emailIndex} className="email-address">
-                      <span>{email}</span>
-                      <button className="copy-btn" onClick={() => copyEmail(email)}>
-                        Copy
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="timestamp">
-                Found: {new Date(item.timestamp).toLocaleString()}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+        ))
+      )}
     </div>
   );
 }
 
-const container = document.getElementById('root');
-const root = createRoot(container);
+
+const root = createRoot(document.getElementById('root'));
 root.render(<Popup />);
