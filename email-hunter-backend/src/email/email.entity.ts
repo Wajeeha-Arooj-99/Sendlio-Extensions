@@ -15,6 +15,12 @@ export class Email {
   @Column()
   address: string;
 
+  @Column({ nullable: true })
+  url: string;
+
+  @Column({ nullable: true })
+  pageTitle: string;
+
   @ManyToOne(() => User, (user) => user.emails, {
     onDelete: 'CASCADE',
   })

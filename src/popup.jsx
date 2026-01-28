@@ -39,8 +39,8 @@ function Popup() {
 
     const url =
       mode === 'login'
-        ? 'http://localhost:3000/auth/login'
-        : 'http://localhost:3000/auth/signup';
+        ? 'http://localhost:8000/auth/login'
+        : 'http://localhost:8000/auth/signup';
 
     try {
       const response = await fetch(url, {
@@ -116,7 +116,7 @@ function Popup() {
           <div className="input-group">
             <input
               type="email"
-              placeholder="Email"
+              placeholder=""
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -135,9 +135,8 @@ function Popup() {
 
           {authError && (
             <p
-              className={`auth-msg ${
-                authError.includes('successfully') ? 'success' : 'error'
-              }`}
+              className={`auth-msg ${authError.includes('successfully') ? 'success' : 'error'
+                }`}
             >
               {authError}
             </p>
@@ -147,8 +146,8 @@ function Popup() {
             {isAuthLoading
               ? 'Please wait...'
               : mode === 'login'
-              ? 'Log In'
-              : 'Sign Up'}
+                ? 'Log In'
+                : 'Sign Up'}
           </button>
 
           <p className="auth-switch">
@@ -183,7 +182,7 @@ function Popup() {
       </div>
 
       {savedEmails.length === 0 ? (
-        <p className="hint">Visit any page — emails will auto-detect ✨</p>
+        <p className="hint">Visit any page — emails will auto-detect</p>
       ) : (
         savedEmails.map((item, index) => (
           <div key={index} className="email-item">
